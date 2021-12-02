@@ -1,0 +1,1025 @@
+---
+title: "Name Verification"
+author: "Brett Olson"
+date: "8/4/2020"
+output:
+  html_document:
+    toc: true
+    toc_float: true
+---
+
+```{r, echo=FALSE}
+htmltools::img(src = knitr::image_uri(file.path('E:/Pics/Logo.png')), 
+               alt = 'logo', 
+               style = 'position:absolute; top:0; right:0;')
+```
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = FALSE, warning = FALSE, message = FALSE)
+```
+
+```{r libraries}
+library(tidyverse)
+library(GenPack)
+library(RecordLinkage)
+library(DT)
+library(data.table)
+library(fmtools)
+library(knitr)
+library(formattable)
+library(kableExtra)
+```
+
+```{r threshold table data}
+
+## FCRA ##
+
+fcra_fname_shell_ver <- readRDS('./summary_files2/shell_fcra_fname_ver_summary.RDS')
+
+fcra_lname_shell_ver <- readRDS('./summary_files2/shell_fcra_lname_ver_summary.RDS')
+
+fcra_first_name_threshold_df <- readRDS('./threshold_example/fname_full_results.RDS')
+
+fcra_last_name_threshold_df <- readRDS('./threshold_example/lname_full_results.RDS')
+
+# Threshold Examples #
+
+fname_lev_thr1 <- readRDS('./threshold_example/lev_threshold1.RDS')
+
+fname_lev_thr2 <- readRDS('./threshold_example/lev_threshold2.RDS')
+
+fname_lev_thr3 <- readRDS('./threshold_example/lev_threshold3.RDS')
+
+fname_lev_thr4 <- readRDS('./threshold_example/lev_threshold4.RDS')
+
+fname_lev_thr5 <- readRDS('./threshold_example/lev_threshold5.RDS')  #5-8 are with nickname added
+
+fname_lev_thr6 <- readRDS('./threshold_example/lev_threshold6.RDS')
+
+fname_lev_thr7 <- readRDS('./threshold_example/lev_threshold7.RDS')
+
+fname_lev_thr8 <- readRDS('./threshold_example/lev_threshold8.RDS')
+
+
+fname_jw_thr1 <- readRDS('./threshold_example/jw_threshold1.RDS')
+
+fname_jw_thr2 <- readRDS('./threshold_example/jw_threshold2.RDS')
+
+fname_jw_thr3 <- readRDS('./threshold_example/jw_threshold3.RDS')
+
+fname_jw_thr4 <- readRDS('./threshold_example/jw_threshold4.RDS')
+
+fname_jw_thr5 <- readRDS('./threshold_example/jw_threshold5.RDS')  #5-8 are with nickname added
+
+fname_jw_thr6 <- readRDS('./threshold_example/jw_threshold6.RDS')
+
+fname_jw_thr7 <- readRDS('./threshold_example/jw_threshold7.RDS')
+
+fname_jw_thr8 <- readRDS('./threshold_example/jw_threshold8.RDS')
+
+
+
+## NonFCRA ##
+
+nonfcra_fname_shell_ver <- readRDS('./summary_files2/shell_nonfcra_fname_ver_summary.RDS')
+
+nonfcra_lname_shell_ver <- readRDS('./summary_files2/shell_nonfcra_lname_ver_summary.RDS')
+
+nonfcra_fname_threshold_df <- readRDS('./threshold_example/nonfcra_fname_full_results.RDS')
+
+nonfcra_lname_threshold_df <- readRDS('./threshold_example/nonfcra_lname_full_results.RDS')
+
+# Threshold Examples #
+
+lname_lev_thr1 <- readRDS('./threshold_example/lev_lname_threshold1.RDS')
+
+lname_lev_thr2 <- readRDS('./threshold_example/lev_lname_threshold2.RDS')
+
+lname_lev_thr3 <- readRDS('./threshold_example/lev_lname_threshold3.RDS')
+
+lname_lev_thr4 <- readRDS('./threshold_example/lev_lname_threshold4.RDS')
+
+lname_lev_thr5 <- readRDS('./threshold_example/lev_lname_threshold5.RDS')  #5-8 are with nickname added
+
+lname_lev_thr6 <- readRDS('./threshold_example/lev_lname_threshold6.RDS')
+
+lname_lev_thr7 <- readRDS('./threshold_example/lev_lname_threshold7.RDS')
+
+lname_lev_thr8 <- readRDS('./threshold_example/lev_lname_threshold8.RDS')
+
+
+lname_jw_thr1 <- readRDS('./threshold_example/jw_lname_threshold1.RDS')
+
+lname_jw_thr2 <- readRDS('./threshold_example/jw_lname_threshold2.RDS')
+
+lname_jw_thr3 <- readRDS('./threshold_example/jw_lname_threshold3.RDS')
+
+lname_jw_thr4 <- readRDS('./threshold_example/jw_lname_threshold4.RDS')
+
+lname_jw_thr5 <- readRDS('./threshold_example/jw_lname_threshold5.RDS')  #5-8 are with nickname added
+
+lname_jw_thr6 <- readRDS('./threshold_example/jw_lname_threshold6.RDS')
+
+lname_jw_thr7 <- readRDS('./threshold_example/jw_lname_threshold7.RDS')
+
+lname_jw_thr8 <- readRDS('./threshold_example/jw_lname_threshold8.RDS')
+
+# Two Name Examples #
+
+lname2_examp <- readRDS('./threshold_example/lname_2ver_example.RDS')
+
+lname2_short_examp <- readRDS('./threshold_example/short_2name_loss_example.RDS')
+
+fname2_examp <- readRDS('./threshold_example/fname_2name_example.RDS')
+
+fname2_short_examp <- readRDS('./threshold_example/short_fname_2name_loss_example.RDS')
+
+# Shell Nickname Example #
+
+shell_nick_examp <- readRDS('./threshold_example/shell_nickname_example.RDS')
+
+new_nick_examp <- readRDS('./threshold_example/new_nickname_example.RDS')
+
+# Low Threshold Example #
+
+fname_short_thresh_examp <- readRDS('./threshold_example/small_thresh_fname_example.RDS')
+
+lname_short_thresh_examp <- readRDS('./threshold_example/small_thresh_lname_example.RDS')
+
+# Record Gain/Loss Example #
+
+rec_gain_fname <- readRDS('./threshold_example/rec_gain_fname.RDS')
+
+rec_gain_lname <- readRDS('./threshold_example/rec_gain_lname.RDS')
+
+rec_loss_fname <- readRDS('./threshold_example/rec_loss_fname.RDS')
+
+rec_loss_lname <- readRDS('./threshold_example/rec_loss_lname.RDS')
+
+# Record Gain/Loss Stats #
+
+fcra_fname_gain_loss <- readRDS('./threshold_example/fcra_fname_gain_loss.RDS')
+
+fcra_lname_gain_loss <- readRDS('./threshold_example/fcra_lname_gain_loss.RDS')
+
+nonfcra_fname_gain_loss <- readRDS('./threshold_example/nonfcra_fname_gain_loss.RDS')
+
+nonfcra_lname_gain_loss <- readRDS('./threshold_example/nonfcra_lname_gain_loss.RDS')
+
+# Final Summary Files #
+
+fcra_fname_final <- readRDS('./final_files/fcra_fname_rate_summary.RDS')
+
+fcra_lname_final <- readRDS('./final_files/fcra_lname_rate_summary.RDS')
+
+nonfcra_fname_final <- readRDS('./final_files/nonfcra_fname_rate_summary.RDS')
+
+nonfcra_lname_final <- readRDS('./final_files/nonfcra_lname_rate_summary.RDS')
+```
+
+```{r shell match data}
+
+## FCRA ##
+
+fcra_fname_lev_shell_match <- readRDS('./summary_files/fcra_fname_lev_nonickame_shell_compare.RDS')
+fcra_fname_jw_shell_match <- readRDS('./summary_files/fcra_fname_jw_nonickame_shell_compare.RDS')
+
+fcra_fname2_lev_shell_match <- readRDS('./summary_files/fcra_fname_lev_wnickame_shell_compare.RDS')  # w/ nickname
+fcra_fname2_jw_shell_match <- readRDS('./summary_files/fcra_fname_jw_wnickame_shell_compare.RDS')  # w/ nickname
+
+fcra_lname_lev_shell_match <- readRDS('./summary_files/fcra_lname_lev_no2name_shell_compare.RDS')
+fcra_lname_jw_shell_match <- readRDS('./summary_files/fcra_lname_jw_no2name_shell_compare.RDS')
+
+fcra_lname2_lev_shell_match <- readRDS('./summary_files/fcra_lname_lev_2name_shell_compare.RDS')  # w/ 2 name verification
+fcra_lname2_jw_shell_match <- readRDS('./summary_files/fcra_lname_jw_2name_shell_compare.RDS')  # w/ 2 name verification
+
+# 103752 have valid LexIDs in FCRA for MAS
+# 104211 have valid LexIDs in FCRA from archive run
+# 463 that had LexIDs in FCRA w/o a source reporting first name (103748 with it)
+# 771 that had LexIDs in FCRA w/o a source reporting last name (103440 with it)
+
+
+## NonFCRA ##
+
+nonfcra_fname_lev_shell_match <- readRDS('./summary_files/nonfcra_fname_lev_nonickname_shell_compare.RDS')
+nonfcra_fname_jw_shell_match <- readRDS('./summary_files/nonfcra_fname_jw_nonickname_shell_compare.RDS')
+
+# nonfcra_fname_lev_shell_match <- readRDS('')  # w/ nickname
+# nonfcra_fname_jw_shell_match <- readRDS('')  # w/ nickname
+
+nonfcra_lname_lev_shell_match <- readRDS('./summary_files/nonfcra_lname_lev_no2name_shell_compare.RDS')
+nonfcra_lname_jw_shell_match <- readRDS('./summary_files/nonfcra_lname_jw_no2name_shell_compare.RDS')
+
+nonfcra_lname2_lev_shell_match <- readRDS('./summary_files/nonfcra_lname_lev_2name_shell_compare.RDS')  # w/ 2 name verification
+nonfcra_lname2_jw_shell_match <- readRDS('./summary_files/nonfcra_lname_jw_2name_shell_compare.RDS')  # w/ 2 name verification
+
+# 104999 have valid LexIDs in NonFCRA for MAS
+# 104993 have valid LexIDs in NonFCRA from archive run
+# 158 that had LexIDs in NonFCRA w/o a source reporting first name (104835 with it)
+# 126 that had LexIDs in NonFCRA w/o a source reporting last name (104867 with it)
+
+```
+
+
+# Review of Business Name Verification
+
+**What did we do for business names?**
+
+From Geoff's research on Business Name verification, we are doing the following steps to call a business name verified:
+
+* Strip all punctuation from B_InpClnName, company_name, corp_legal_name, dba_name
+* Strip all furniture words from B_InpClnName, company_name, corp_legal_name, dba_name
+* Strip all whitespace from input name B_InpClnName, company_name, corp_legal_name, dba_name
+* **After this is done, and there is an exact string match, it is a verified non-miskey.**
+
+Addition 1: Check if a modified header name is detected in the modified version of B_InpClnName
+
+* If a modified header name is found in part of the input name, the record is considered verified and not a miskey
+* This covers cases where “too much information” is provided to compare strings using Levenshtein Similarity alone
+* Example: input name “ABC Co DBA The Alphabet Company” vs header name “The Alphabet Company”
+* **This will also be called a verified non-miskey.**
+		
+**If there is no exact match from these two approaches, Levenshtein simlarity will be calculated between the two.  If the Levenshtein similarity is 0.6 or greater, then it is a verified miskey.**
+
+<br>
+
+# Current Shell Logic
+
+Our current shell logic for first/last name verification is somewhat of a black box.  We use match scores that are coded in ECL and not very explainable.  This is why we are looking to use alternative, more transparent methods, to verify sources for certain input components.  A big initiative in the MAS project is to standardize practices across business, and across attributes.  These new processes that are proposed in this document, will do just that.
+
+However, before new proposals are made, here is the logic for name verifcation as it stands today.
+
+For first name verification, the current logic will call one of two things verified (with no miskey):  
+
+1. If the input first name matches the first name on the Header, exactly.
+2. If the input first name and the first name on the Header can be standardized by a nickname process to match. For example, if the input first name is Alex and the first name on the Header is Alexander, then it will be called a match.  
+    + This list of first name nicknames is a constant that is stored here: https://gitlab.ins.risk.regn.net/risk-engineering/PublicRecords/-/blob/ThorProd/NID/Set_NamesNew.ecl.  
+
+For miskey logic, the shell uses a first name match score.  This is where we lose a lot of transparency.  The first name match score does a confusing amount of string comparisons that are not very easy to access. Here is how the logic plays out for verified miskey:
+
+1. If we do not have an exact match among input first name and Header first name, we move to the first name match score.
+2. If the first name match score is greater than or equal to 80 (this is out of 100), then we call it a verified miskey.
+
+The same logic follows for last name, however, there is no nickname matching.  There is just an exact match comparison, then if it is not an exact match, a last name match score is calculated with the same cutoff at 80.  Therefore, it would be redundant to lay that all out again here.
+
+<br>
+
+# Verification Proposals
+
+
+## Algorithms {.tabset .tabset-fade .tabset-pills}
+
+There are two different algorithms that I propose we use to replace our name matching score in our current logic.  Levenshtein similarity, which was used in business name verification, and Jaro-Winkler, which is a great algorithm for name verification for small strings, which we have in first and last name.
+
+<br>
+
+### Levenshtein Similairity
+
+Levenshtein similarity is and algorithm that is a spin on the levenshtein distance calculation to take into consideration strings of different lengths.  Levenshtein distance works well with 2 strings of fixed length (such as SSN or phone number), but can be inconsistent when the strings being compared are not fixed.  Therefore, we use the levenshtein similarity equation.  
+
+Levenshtein distance is the minimum amount of edits (insertion, deletion, or subsitution) to change one string into the other (i.e. LEXIS to NEXIS is distance 1, and HONDA to HYUNDAI is distance 3). 
+
+Levenshtein similarity is defined by the equation below:
+
+$$Sim_{a,b} = 1 - \frac{d(a,b)}{max(A,B)}$$
+
+In this equation $d(a,b)$ is equal to the levenshtein distance of strings $a$ and $b$.  $A$ and $B$ are the lengths of strings $a$ and $b$.
+
+Thus, or our LEXIS vs. NEXIS example, we would have a Levenshtein similarity of 0.8.
+
+
+### Jaro-Winkler
+
+Jaro-Winkler is also an algorithm to compare distance of two strings.  This is a very widely used algorithm for name matching. The reason for that, is that it places more weight on the beginning of the strings.  For first names and last names, this could be helpful, considering first names can be as short as 3 or 4 characters and don't really have more than 10 characters regularly.  
+
+First you have to take the Jaro distance, which is similar to the levenshtein similarity.  The equation for Jaro is below:
+
+$$Sim_{j} = \frac{1}{3}\left(\frac{m}{|s_{1}|}+\frac{m}{|s_{2}|}+\frac{m-t}{m}\right)$$
+
+Where:
+
+* $|s_i|$ is the length of the string $|s_i|$;
+* $m$ is the number of matching characters
+* $t$ is half the number of transpositions
+  + The number of matching (but different sequence order) characters divided by 2 defines the number of transpositions
+  
+Then, we add an extra calculation to use the prefix matching to give more favorable scores to names that match more at the beginning of the string. The Jaro-Winkler similarity is then defined below:
+
+$$Sim_{w} = Sim_{j} + \ell p(1-sim_{j})$$
+
+Where:
+
+* $Sim_{j}$ is the Jaro similarity for strings $s_1$ and $s_2$
+* $\ell$ is the length of common prefix at the start of the string up to a maximum of four characters
+* $p$ is a constant scaling factor for how much the score is adjusted upwards for having common prefixes. $p$ should not exceed 0.25, otherwise the similarity could become larger than 1. The standard value for this constant in Winkler's work is $p = 0.1$ and that is what we use here
+
+Finally, the Jaro-Winkler distance is defined here:
+
+$$D_{w} = 1 - Sim_{w}$$
+
+##
+
+First and last name are going to differ slightly from business name.  However, the algorithm for the most part should stay the same.  First and last name are much shorter than busines name and should be treated slightly different.
+
+<br>
+
+## First Name
+
+**Approach 1:**
+
+*	Strip all punctuation and whitespace from P_InpClnNameFirst and fname
+* If they are an exact match, it is a verified non-miskey
+
+*Addition 1:  Use a nickname table to look up if either P_InpClnNameFirst is a nickname of fname OR fname is a nickname of P_InpClnNameFirst (nickname table tbd).*
+
+*Addition 2:  See if P_InpClnNameFirst starts with fname OR ends with fname and vice versa (both strings must be length greater than 2).  This is checking to see if there is a first name on either side, and thus being able to verify first names such as GEORGEROBERT with a first name of GEORGE given.*
+
+* If not verified by either of these, calculate the Levenshtein similarity
+
+**Approach 2:**
+
+* Same as approach 1, BUT calculate Jaro-Winkler value. This puts more emphasis on the beginning of the name, so it might be more effective for shorter strings such as first names.
+
+*Additions: Same as addition 1 and 2 from approach 1*
+		
+<br>
+
+## Last Name
+
+**Approach 1:**
+
+* Strip all punctuation and whitespace from P_InpClnNameLast and lname
+* If they are an exact match call, it is a verified non-miskey
+
+*Addition 1:  See if P_InpClnNameLast starts with lname OR ends with lname and vice versa (both strings must be length greater than 2).  This is checking to see if there is a last name on either side, and thus being able to verify hyphenated last names*
+
+* If not verified by either of these, calculate the Levenshtein similarity
+		
+**Approach 2:**
+
+* Same as approach 1, BUT calculate Jaro-Winkler value. This puts more emphasis on the beginning of the name, so it might be more effective for shorter strings such as last names.
+	
+*Addition 1: Same as addition 1 from approach 1*
+
+<br>
+
+# Threshold Verification Rates {.tabset .tabset-fade .tabset-pills}
+
+There are several threshold cutoffs that are considered in the tables below, along with the different approaches mentioned above.  
+
+Examples of names found in each threshold can be found at the end of this document in the **Threshold Examples** section.
+
+*Note: Lev+Nickname+2Name and JW+Nickname+2Name are using both current shell nickname logic, new nicknames, and 2-name verification*
+
+<br>
+
+## FCRA First Name
+
+```{r fcra fname full results table, results = 'asis'}
+fcra_fname_shell_add <- data.frame(Approach = 'Shell',
+                                   Threshold = 'NA',
+                                   Unverified = fcra_fname_shell_ver[1,2],
+                                   Verified_Miskey = fcra_fname_shell_ver[3,2],
+                                   Verified = fcra_fname_shell_ver[2,2])
+names(fcra_fname_shell_add) <- c('Approach', 'Threshold', 'Unverified', 'Verified_Miskey', 'Verified')
+fcra_first_name_threshold_df <- rbind(fcra_fname_shell_add, fcra_first_name_threshold_df)
+kable(fcra_first_name_threshold_df) %>% 
+  kable_styling(bootstrap_options = c('hover', 'striped')) %>% 
+  row_spec(0, background = 'lightskyblue', color = 'white') %>% 
+  row_spec(1, bold = T)
+```
+
+<br>
+
+## NonFCRA First Name
+
+
+```{r nonfcra fname full results table, results = 'asis'}
+nonfcra_fname_shell_add <- data.frame(Approach = 'Shell',
+                                      Threshold = 'NA',
+                                      Unverified = nonfcra_fname_shell_ver[1,2],
+                                      Verified_Miskey = nonfcra_fname_shell_ver[3,2],
+                                      Verified = nonfcra_fname_shell_ver[2,2])
+names(nonfcra_fname_shell_add) <- c('Approach', 'Threshold', 'Unverified', 'Verified_Miskey', 'Verified')
+nonfcra_fname_threshold_df <- rbind(nonfcra_fname_shell_add, nonfcra_fname_threshold_df)
+kable(nonfcra_fname_threshold_df) %>% 
+  kable_styling(bootstrap_options = c('hover', 'striped')) %>% 
+  row_spec(0, background = 'lightskyblue', color = 'white') %>% 
+  row_spec(1, bold = T)
+```
+
+<br>
+
+## FCRA Last Name
+
+```{r fcra lname shell ver results, results = 'asis'}
+fcra_lname_shell_add <- data.frame(Approach = 'Shell',
+                                   Threshold = 'NA',
+                                   Unverified = fcra_lname_shell_ver[1,2],
+                                   Verified_Miskey = fcra_lname_shell_ver[3,2],
+                                   Verified = fcra_lname_shell_ver[2,2])
+names(fcra_lname_shell_add) <- c('Approach', 'Threshold', 'Unverified', 'Verified_Miskey', 'Verified')
+fcra_last_name_threshold_df <- rbind(fcra_lname_shell_add, fcra_last_name_threshold_df)
+kable(fcra_last_name_threshold_df) %>% 
+  kable_styling(bootstrap_options = c('hover', 'striped')) %>% 
+  row_spec(0, background = 'lightskyblue', color = 'white') %>% 
+  row_spec(1, bold = T)
+```
+
+<br>
+
+
+## NonFCRA Last Name
+
+```{r nonfcra lname shell ver results, results = 'asis'}
+nonfcra_lname_shell_add <- data.frame(Approach = 'Shell',
+                                      Threshold = 'NA',
+                                      Unverified = nonfcra_lname_shell_ver[1,2],
+                                      Verified_Miskey = nonfcra_lname_shell_ver[3,2],
+                                      Verified = nonfcra_lname_shell_ver[2,2])
+names(nonfcra_lname_shell_add) <- c('Approach', 'Threshold', 'Unverified', 'Verified_Miskey', 'Verified')
+nonfcra_lname_threshold_df <- rbind(nonfcra_lname_shell_add, nonfcra_lname_threshold_df)
+kable(nonfcra_lname_threshold_df) %>% 
+  kable_styling(bootstrap_options = c('hover', 'striped')) %>% 
+  row_spec(0, background = 'lightskyblue', color = 'white') %>% 
+  row_spec(1, bold = T)
+```
+
+<br>
+
+
+# Nickname, 2 Name, and Low Threshold Improvements
+
+<br>
+
+## Nickname {.tabset .tabset-fade .tabset-pills}
+
+From our samples, our current shell logic in adding a nickname list for first name adds ~2.5% and 3% for exact verification rates in FCRA and NonFCRA, respectively.  Adding another nickname list that I found from an Old Dominion University research project (https://github.com/carltonnorthern/nickname-and-diminutive-names-lookup), only adds another 0.14% for FCRA and 0.23% for NonFCRA.  Below are first some examples of records where we are not verifying right away, but with shell nickname logic we verify that record outright.  Then the second section is records where we improve by adding the second nickname list.
+
+
+### Adding Shell Nicknames
+
+<br>
+
+
+```{r shell nickname example, results = 'asis'}
+datatable(shell_nick_examp,
+          colnames = c('Shell_Nickname_Match' = 'shell_nickname_match',
+                       'New_Nickname_Match' = 'nickname_match'))
+```
+
+<br>
+
+### Adding New Nicknames
+
+<br>
+
+
+```{r new nickname example, results = 'asis'}
+datatable(new_nick_examp,
+          colnames = c('Shell_Nickname_Match' = 'shell_nickname_match',
+                       'New_Nickname_Match' = 'nickname_match'))
+```
+
+<br>
+
+## 2 Name Verification {.tabset .tabset-fade .tabset-pills}
+
+### First Name
+
+In the current shell, the fnamematchscore does a good job of identifying first name matches where there is one first name given on input but the Header first name has 2 names.  Therefore, to keep up with current verification rates, we must implement an algorithm to detect these as well.  
+
+Below are examples of what would be a verified first name, based on this algorithm:
+
+<br>
+
+```{r 2 fname example, results = 'asis'}
+datatable(fname2_examp %>% mutate(FName_lev_sim = round(FName_lev_sim, 4)),
+          colnames = c('2Name_Verified' = 'fname_2ver'))
+```
+
+<br>
+
+There is a character minimum for verifying first names this way.  The number of characters is at least 3 for first and last name in the input name AND the Header name.  Below are some examples of lost names by applying this character minimum.
+
+<br>
+
+```{r 2 fname char min example, results = 'asis'}
+datatable(fname2_short_examp %>% mutate(FName_lev_sim = round(FName_lev_sim, 4)))
+```
+
+<br>
+
+### Last Name 
+
+Currently in the shell, we only use last name match scoring to verify last name.  This last name matching score does a really good job of picking up two last names.  We would originally be missing out on a good amount of verification if we did not include an algorithm to verify hyphenated last names.  It is not perfect, but way more true positives are being picked up rather than false positives. Even the false positives, however, are being considered verified currently.  So, we are not adding any verification we do not currently have.
+
+Below are some examples of where we would see this new 2 name matching logic.
+
+<br>
+
+```{r 2 lname example, results = 'asis'}
+datatable(lname2_examp,
+          colnames = c('2Name_Verified' = 'lname_2ver'))
+```
+
+<br>
+
+There is the same character minimum for verifying last name as there is for first name.  There must be at least 3 characters in both lname from the Header and P_InpClnNameLast on input. This gets rid of us verifying 'Mc' with 'McMahon' for example.  Below is a table with many examples of what we are filtering out with this minimum character requirement.
+
+<br>
+
+```{r 2 lname char min example, results = 'asis'}
+datatable(lname2_short_examp %>% mutate(LName_lev_sim = round(LName_lev_sim, 4)))
+```
+
+<br>
+
+
+## Low Threshold {.tabset .tabset-fade}
+
+This section offers a strategy to lower the threshold for names that are 4 characters or shorter.  The reasoning behind this would be to verify names that don't have a lot of leeway.  For instance, MARY and MAYR are have a 0.5 Levenshtein similarity.  Therefore, it would not meet the cut for our 0.6 threshold.  Below is the verification impact this rule would have by adding it to the verification process:
+
+* FCRA First Name: **+0.06%** of records
+* NonFCRA First Name: **+0.088%** of records
+* FCRA Last Name: **+0.05%** of records
+* NonFCRA Last Name: **+0.066%** of records
+
+Here are some examples on what would be picked up:
+
+### First Name
+
+```{r, results = 'asis'}
+datatable(fname_short_thresh_examp %>% mutate(FName_lev_sim = round(FName_lev_sim, 4)))
+```
+
+<br>
+
+### Last Name
+
+```{r, results = 'asis'}
+datatable(lname_short_thresh_examp %>% mutate(LName_lev_sim = round(LName_lev_sim, 4)))
+```
+
+<br>
+
+# Gain/Loss Records
+
+
+## Stats {.tabset .tabset-fade .tabset-pills}
+
+Below are some tables going through the exact statistics of record gain/loss comparing our new approach to the current shell logic.  The threshold is only levenshtein similarity.  This also includes both nickname lists for first name and 2-name verification for last name as well, even though it is not indicated.
+
+Keep in mind the current Boca Shell Verification rates:
+
+* FCRA First Name: **94.88%**
+* NonFCRA First Name: **93.88%**
+* FCRA Last Name: **78.77%**
+* NonFCRA Last Name: **75.88%**
+
+The "Verified by Both" and the "Unverified by Both" columns are referring to the records where our new proposal AND the current shell logic verify/do not verify.
+
+<br>
+
+### FCRA First Name
+
+```{r fcra fname gain loss stat, results = 'asis'}
+kable(fcra_fname_gain_loss,
+      col.names = c('Threshold', 'Verified by Both', 'Gained', 'Lost', 'Unverified by Both', 'Total Verified'),
+      align = 'c') %>% 
+  kable_styling(bootstrap_options = c('hover', 'striped')) %>% 
+  row_spec(0, background = 'lightskyblue', color = 'white') %>% 
+  column_spec(6, bold = T)
+```
+
+<br>
+
+### NonFCRA First Name
+
+```{r nonfcra fname gain loss stat, results = 'asis'}
+kable(nonfcra_fname_gain_loss,
+      col.names = c('Threshold', 'Verified by Both', 'Gained', 'Lost', 'Unverified by Both', 'Total Verified'),
+      align = 'c') %>% 
+  kable_styling(bootstrap_options = c('hover', 'striped')) %>% 
+  row_spec(0, background = 'lightskyblue', color = 'white') %>% 
+  column_spec(6, bold = T)
+```
+
+<br>
+
+### FCRA Last Name
+
+```{r fcra lname gain loss stat, results = 'asis'}
+kable(fcra_lname_gain_loss,
+      col.names = c('Threshold', 'Verified by Both', 'Gained', 'Lost', 'Unverified by Both', 'Total Verified'),
+      align = 'c') %>% 
+  kable_styling(bootstrap_options = c('hover', 'striped')) %>% 
+  row_spec(0, background = 'lightskyblue', color = 'white') %>% 
+  column_spec(6, bold = T)
+```
+
+<br>
+
+
+### NonFCRA Last Name
+
+```{r nonfcra lname gain loss stat, results = 'asis'}
+kable(nonfcra_lname_gain_loss,
+      col.names = c('Threshold', 'Verified by Both', 'Gained', 'Lost', 'Unverified by Both', 'Total Verified'),
+      align = 'c') %>% 
+  kable_styling(bootstrap_options = c('hover', 'striped')) %>% 
+  row_spec(0, background = 'lightskyblue', color = 'white') %>% 
+  column_spec(6, bold = T)
+```
+
+<br>
+
+## Records Lost Examples {.tabset .tabset-fade .tabset-pills}
+
+Below is a look at which records that would be lost based on our business threshold of 0.6 + all nicknames (for first name) + 2-name verification.
+
+### First Name
+
+```{r fname rec loss, results = 'asis'}
+datatable(rec_loss_fname %>% mutate(FName_lev_sim = round(FName_lev_sim, digits = 4)))
+```
+
+<br>
+
+### Last Name
+
+```{r lname rec loss, results = 'asis'}
+datatable(rec_loss_lname %>% mutate(LName_lev_sim = round(LName_lev_sim, digits = 4)))
+```
+
+<br>
+
+
+## Records Gained Examples {.tabset .tabset-fade .tabset-pills}
+
+### First Name
+
+```{r fname rec gain, results = 'asis'}
+datatable(rec_gain_fname %>% mutate(FName_lev_sim = round(FName_lev_sim, digits = 4)))
+```
+
+<br>
+
+### Last Name
+
+```{r lname rec gain, results = 'asis'}
+datatable(rec_gain_lname %>% mutate(LName_lev_sim = round(LName_lev_sim, digits = 4)),
+          colnames = c('2Name_Verified' = 'lname_2ver'))
+```
+
+<br>
+
+# Final Decision
+
+## First Name {.tabset .tabset-fade .tabset-pills}
+
+This is the final logic that is going to be applied to first name:
+
+1. Exact match
+2. Nickname match
+3. First initial on Header (has to be one character) matches input first name (NOT vice versa)
+4. 2 name check where both names are more than 2 characters
+5. Levenshtein similarity
+	a. 0.6 threshold for characters 5 or more
+	b. 0.5 threshold for characters 4 or less in both names
+
+Below is the verification rates on our FCRA and NonFCRA sample:
+
+### FCRA
+
+<br>
+
+The current shell verification rate: **94.88%**
+
+The new logic verification rate: **95.18%**
+
+<br>
+
+```{r, results = 'asis'}
+kable(fcra_fname_final,
+      col.names = c('Verification Type', 'Percent')) %>% 
+  kable_styling(bootstrap_options = c('hover', 'striped'), full_width = F, position = "left") %>% 
+  row_spec(0, background = 'lightskyblue', color = 'white')
+```
+
+<br>
+
+### NonFCRA
+
+<br>
+
+The current shell verification rate: **93.88%**
+
+The new logic verification rate: **93.85%**
+
+<br>
+
+```{r, results = 'asis'}
+kable(nonfcra_fname_final,
+      col.names = c('Verification Type', 'Percent')) %>% 
+  kable_styling(bootstrap_options = c('hover', 'striped'), full_width = F, position = "left") %>% 
+  row_spec(0, background = 'lightskyblue', color = 'white')
+```
+
+<br>
+
+## Last Name {.tabset .tabset-fade .tabset-pills}
+
+This is the final logic that is going to be applied to last name:
+
+1. Exact match
+2. 2 name check where last name on the header is more than 2 characters
+3. Levenshtein similarity
+	a. 0.6 threshold for characters 5 or more
+	b. 0.5 threshold for characters 4 or less in both names
+	
+Below is the verification rates on our FCRA and NonFCRA sample:
+
+### FCRA
+
+<br>
+
+The current shell verification rate: **78.77%**
+
+The new logic verification rate: **79.22%**
+
+<br>
+
+```{r, results = 'asis'}
+kable(fcra_lname_final,
+      col.names = c('Verification Type', 'Percent')) %>% 
+  kable_styling(bootstrap_options = c('hover', 'striped'), full_width = F, position = "left") %>% 
+  row_spec(0, background = 'lightskyblue', color = 'white')
+```
+
+<br>
+
+### NonFCRA
+
+<br>
+
+The current shell verification rate: **75.88%**
+
+The new logic verification rate: **76.42%**
+
+<br>
+
+```{r, results = 'asis'}
+kable(nonfcra_lname_final,
+      col.names = c('Verification Type', 'Percent')) %>% 
+  kable_styling(bootstrap_options = c('hover', 'striped'), full_width = F, position = "left") %>% 
+  row_spec(0, background = 'lightskyblue', color = 'white')
+```
+
+<br>
+
+
+
+# Threshold Examples
+
+<br>
+
+## First Name Levenshtein {.tabset .tabset-fade .tabset-pills}
+
+### 0.4 <= Lev <= 0.5
+
+```{r threshold 1}
+datatable(fname_lev_thr1 %>% mutate(FName_lev_sim = round(FName_lev_sim, digits = 4)) %>% head(n = 1000),
+          colnames = c('FName_Lev_Similarity' = 'FName_lev_sim'))
+```
+
+### 0.5 <= Lev <= 0.6
+
+```{r threshold 2}
+datatable(fname_lev_thr2 %>% mutate(FName_lev_sim = round(FName_lev_sim, digits = 4)) %>% head(n = 1000),
+          colnames = c('FName_Lev_Similarity' = 'FName_lev_sim'))
+```
+
+### 0.6 <= Lev <= 0.7
+
+```{r threshold 3}
+datatable(fname_lev_thr3 %>% mutate(FName_lev_sim = round(FName_lev_sim, digits = 4)) %>% head(n = 1000),
+          colnames = c('FName_Lev_Similarity' = 'FName_lev_sim'))
+```
+
+### 0.7 <= Lev <= 0.8
+
+```{r threshold 4}
+datatable(fname_lev_thr4 %>% mutate(FName_lev_sim = round(FName_lev_sim, digits = 4)) %>% head(n = 1000),
+          colnames = c('FName_Lev_Similarity' = 'FName_lev_sim'))
+```
+
+### 0.4 <= Lev <= 0.5 w/ Nickname
+
+```{r threshold 5}
+datatable(fname_lev_thr5 %>% mutate(FName_lev_sim = round(FName_lev_sim, digits = 4)) %>% head(n = 1000),
+          colnames = c('FName_Lev_Similarity' = 'FName_lev_sim'))
+```
+
+### 0.5 <= Lev <= 0.6 w/ Nickname
+
+```{r threshold 6}
+datatable(fname_lev_thr6 %>% mutate(FName_lev_sim = round(FName_lev_sim, digits = 4)) %>% head(n = 1000),
+          colnames = c('FName_Lev_Similarity' = 'FName_lev_sim'))
+```
+
+### 0.6 <= Lev <= 0.7 w/ Nickname
+
+```{r threshold 7}
+datatable(fname_lev_thr7 %>% mutate(FName_lev_sim = round(FName_lev_sim, digits = 4)) %>% head(n = 1000),
+          colnames = c('FName_Lev_Similarity' = 'FName_lev_sim'))
+```
+
+### 0.7 <= Lev <= 0.8 w/ Nickname
+
+```{r threshold 8}
+datatable(fname_lev_thr8 %>% mutate(FName_lev_sim = round(FName_lev_sim, digits = 4)) %>% head(n = 1000),
+          colnames = c('FName_Lev_Similarity' = 'FName_lev_sim'))
+```
+
+<br>
+
+## First Name Jaro-Winkler {.tabset .tabset-fade .tabset-pills}
+
+### 0.7 <= JW <= 0.8
+
+```{r threshold 9}
+datatable(fname_jw_thr1 %>% mutate(FName_JW = round(FName_JW, digits = 4)) %>% head(n = 1000),
+          colnames = c('FName_Jaro_Winkler' = 'FName_JW'))
+```
+
+### 0.8 <= JW <= 0.85
+
+```{r threshold 10}
+datatable(fname_jw_thr2 %>% mutate(FName_JW = round(FName_JW, digits = 4)) %>% head(n = 1000),
+          colnames = c('FName_Jaro_Winkler' = 'FName_JW'))
+```
+
+### 0.85 <= JW <= 0.9
+
+```{r threshold 11}
+datatable(fname_jw_thr3 %>% mutate(FName_JW = round(FName_JW, digits = 4)) %>% head(n = 1000),
+          colnames = c('FName_Jaro_Winkler' = 'FName_JW'))
+```
+
+### 0.9 <= JW <= 0.95
+
+```{r threshold 12}
+datatable(fname_jw_thr4 %>% mutate(FName_JW = round(FName_JW, digits = 4)) %>% head(n = 1000),
+          colnames = c('FName_Jaro_Winkler' = 'FName_JW'))
+```
+
+### 0.7 <= JW <= 0.8 w/ Nickname
+
+```{r threshold 13}
+datatable(fname_jw_thr5 %>% mutate(FName_JW = round(FName_JW, digits = 4)) %>% head(n = 1000),
+          colnames = c('FName_Jaro_Winkler' = 'FName_JW'))
+```
+
+### 0.8 <= JW <= 0.85 w/ Nickname
+
+```{r threshold 14}
+datatable(fname_jw_thr6 %>% mutate(FName_JW = round(FName_JW, digits = 4)) %>% head(n = 1000),
+          colnames = c('FName_Jaro_Winkler' = 'FName_JW'))
+```
+
+### 0.85 <= JW <= 0.9 w/ Nickname
+
+```{r threshold 15}
+datatable(fname_jw_thr7 %>% mutate(FName_JW = round(FName_JW, digits = 4)) %>% head(n = 1000),
+          colnames = c('FName_Jaro_Winkler' = 'FName_JW'))
+```
+
+### 0.9 <= JW <= 0.95 w/ Nickname
+
+```{r threshold 16}
+datatable(fname_jw_thr8 %>% mutate(FName_JW = round(FName_JW, digits = 4)) %>% head(n = 1000),
+          colnames = c('FName_Jaro_Winkler' = 'FName_JW'))
+```
+
+<br>
+
+## Last Name Levenshtein {.tabset .tabset-fade .tabset-pills}
+
+### 0.4 <= Lev <= 0.5
+
+```{r lname threshold 1}
+datatable(lname_lev_thr1 %>% mutate(LName_lev_sim = round(LName_lev_sim, digits = 4)) %>% head(n = 1000),
+          colnames = c('LName_Lev_Similarity' = 'LName_lev_sim'))
+```
+
+### 0.5 <= Lev <= 0.6
+
+```{r lname threshold 2}
+datatable(lname_lev_thr2 %>% mutate(LName_lev_sim = round(LName_lev_sim, digits = 4)) %>% head(n = 1000),
+          colnames = c('LName_Lev_Similarity' = 'LName_lev_sim'))
+```
+
+### 0.6 <= Lev <= 0.7
+
+```{r lname threshold 3}
+datatable(lname_lev_thr3 %>% mutate(LName_lev_sim = round(LName_lev_sim, digits = 4)) %>% head(n = 1000),
+          colnames = c('LName_Lev_Similarity' = 'LName_lev_sim'))
+```
+
+### 0.7 <= Lev <= 0.8
+
+```{r lname threshold 4}
+datatable(lname_lev_thr4 %>% mutate(LName_lev_sim = round(LName_lev_sim, digits = 4)) %>% head(n = 1000),
+          colnames = c('LName_Lev_Similarity' = 'LName_lev_sim'))
+```
+
+### 0.4 <= Lev <= 0.5 w/ 2 Name
+
+```{r lname threshold 5}
+datatable(lname_lev_thr5 %>% mutate(LName_lev_sim = round(LName_lev_sim, digits = 4)) %>% head(n = 1000),
+          colnames = c('LName_Lev_Similarity' = 'LName_lev_sim'))
+```
+
+### 0.5 <= Lev <= 0.6 w/ 2 Name
+
+```{r lname threshold 6}
+datatable(lname_lev_thr6 %>% mutate(LName_lev_sim = round(LName_lev_sim, digits = 4)) %>% head(n = 1000),
+          colnames = c('LName_Lev_Similarity' = 'LName_lev_sim'))
+```
+
+### 0.6 <= Lev <= 0.7w/ 2 Name
+
+```{r lname threshold 7}
+datatable(lname_lev_thr7 %>% mutate(LName_lev_sim = round(LName_lev_sim, digits = 4)) %>% head(n = 1000),
+          colnames = c('LName_Lev_Similarity' = 'LName_lev_sim'))
+```
+
+### 0.7 <= Lev <= 0.8 w/ Nickname
+
+```{r lname threshold 8}
+datatable(lname_lev_thr8 %>% mutate(LName_lev_sim = round(LName_lev_sim, digits = 4)) %>% head(n = 1000),
+          colnames = c('LName_Lev_Similarity' = 'LName_lev_sim'))
+```
+
+<br>
+
+## Last Name Jaro-Winkler {.tabset .tabset-fade .tabset-pills}
+
+### 0.7 <= JW <= 0.8
+
+```{r lname threshold 9}
+datatable(lname_jw_thr1 %>% mutate(LName_JW = round(LName_JW, digits = 4)) %>% head(n = 1000),
+          colnames = c('LName_Jaro_Winkler' = 'LName_JW'))
+```
+
+### 0.8 <= JW <= 0.85
+
+```{r lname threshold 10}
+datatable(lname_jw_thr2 %>% mutate(LName_JW = round(LName_JW, digits = 4)) %>% head(n = 1000),
+          colnames = c('LName_Jaro_Winkler' = 'LName_JW'))
+```
+
+### 0.85 <= JW <= 0.9
+
+```{r lname threshold 11}
+datatable(lname_jw_thr3 %>% mutate(LName_JW = round(LName_JW, digits = 4)) %>% head(n = 1000),
+          colnames = c('LName_Jaro_Winkler' = 'LName_JW'))
+```
+
+### 0.9 <= JW <= 0.95
+
+```{r lname threshold 12}
+datatable(lname_jw_thr4 %>% mutate(LName_JW = round(LName_JW, digits = 4)) %>% head(n = 1000),
+          colnames = c('LName_Jaro_Winkler' = 'LName_JW'))
+```
+
+### 0.7 <= JW <= 0.8 w/ 2 Name
+
+```{r lname threshold 13}
+datatable(lname_jw_thr5 %>% mutate(LName_JW = round(LName_JW, digits = 4)) %>% head(n = 1000),
+          colnames = c('LName_Jaro_Winkler' = 'LName_JW'))
+```
+
+### 0.8 <= JW <= 0.85 w/ 2 Name
+
+```{r lname threshold 14}
+datatable(lname_jw_thr6 %>% mutate(LName_JW = round(LName_JW, digits = 4)) %>% head(n = 1000),
+          colnames = c('LName_Jaro_Winkler' = 'LName_JW'))
+```
+
+### 0.85 <= JW <= 0.9 w/ 2 Name
+
+```{r lname threshold 15}
+datatable(lname_jw_thr7 %>% mutate(LName_JW = round(LName_JW, digits = 4)) %>% head(n = 1000),
+          colnames = c('LName_Jaro_Winkler' = 'LName_JW'))
+```
+
+### 0.9 <= JW <= 0.95 w/ 2 Name
+
+```{r lname threshold 16}
+datatable(lname_jw_thr8 %>% mutate(LName_JW = round(LName_JW, digits = 4)) %>% head(n = 1000),
+          colnames = c('LName_Jaro_Winkler' = 'LName_JW'))
+```
+
+<br>

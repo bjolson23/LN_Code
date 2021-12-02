@@ -1,0 +1,528 @@
+---
+title: "RMD Training"
+author: "Brett Olson"
+date: "`r format(Sys.time(), '%m/%d/%y')`"
+output:
+  html_document:
+    toc: true
+    toc_float: true
+    code_folding: hide
+---
+
+# 1 Setup {#setup}
+
+This chunk of code sets the options for all chunks of R code that are embedded in the document.  They can be changed in the specific chunks, if desired by setting them to TRUE in the curly bracket statement.
+
+All code chunks that are going to be R code must start with three back ticks and the letter **r** in curly brackets.  Then, it must end in three back ticks as well.
+
+The code needs to be echoed for visibility (echo = TRUE).  No extra warnings or messages from the code should be displayed, so they are both set to FALSE.
+
+If you don't want the code to be visible, just set to FALSE.
+
+<br>
+
+```{r setup, include=TRUE}
+knitr::opts_chunk$set(echo = TRUE, warning = FALSE, message = FALSE)
+options(scipen = 999)
+```
+
+<br>
+
+The following code will just load in necessary libraries for creating output.
+
+<br>
+
+```{r libraries}
+library(tidyverse)
+library(DT)
+library(kableExtra)
+library(formattable)
+library(knitr)
+```
+
+<br>
+
+# 2 Text Editing
+
+There are a few easy things that markdown can help with when making a write up pop a bit more.  Some easy things like bolding/italicizing, bullet lists, writing inline code, writing out good looking formulas, and embedding links.
+
+<br>
+
+## 2.1 Bold/Italics
+
+Some of the more simple text enhancements can be made doing the following: 
+
+```**bold**``` ```__bold__```
+
+```*italics*``` ```_italic_```
+
+**bold** __bold2__
+
+*italic* _italic2_
+
+<br>
+
+## 2.2 Bullet Lists
+
+There are two ways to make lists in markdown.  One with the regular bullets, and one with numbers.
+
+```
+* First Item
+* Second Item
+  + Sub Item
+```
+
+Notice the tab for the sub item.  This needs to be tabbed in to work.
+
+This will provide the following:
+
+* First Item
+* Second Item
+   + Sub Item
+
+<br>
+
+The second way is by numbering lists:
+
+```
+1. First Item
+2. Second Item
+  + Sub Item
+```
+
+This produces the following:
+
+1. First Item
+2. Second Item
+   + Sub Item
+
+<br>
+
+## 2.3 Inline Code 
+
+A really useful thing that can be utilized in markdown is embedding calculations for numbers inside text.  This allows for calculations as complex as you want them to be, to be inserted programmatically into text.
+
+To embed a calculation/output into a text chunk just use: 
+
+```
+r nrow(iris) surrounded by back ticks
+```
+
+Here's the example:
+
+The iris dataset has **`r nrow(iris)`** rows.
+
+<br>
+
+## 2.4 Formula's
+
+A simple way to drop a formula inside text is by surrounding by dollar signs:
+
+```
+$y = mx + b$
+```
+
+The equation for a line on a plane is $y = mx + b$.
+
+<br>
+
+The formula can also be put on its own line by putting double dollar signs around it. 
+
+The more complex formulas can be made using LaTeX formatting.
+
+```
+$$Sim_{a,b} = 1 - \frac{d(a,b)}{max(A,B)}$$
+```
+
+The following is the formula for Levenshtein similarity:
+
+$$Sim_{a,b} = 1 - \frac{d(a,b)}{max(A,B)}$$
+
+<br>
+
+## 2.5 Inserting links
+
+Another useful case is embedding links into text.  I use this a lot to reference JIRA tickets.
+
+The following will output a hyperlink:
+
+```
+[link to flowers](https://en.wikipedia.org/wiki/Iris_(plant)
+```
+
+The "link to flowers" part is just what the link will show up as: [link to flowers](https://en.wikipedia.org/wiki/Iris_(plant))
+
+<br>
+
+A link to sections on this document are also easy to make.  The way to do this is to tag the sections with 
+
+```
+# Header {#tag}
+
+[showlink](#tag)
+```
+
+Go to section for [setup](#setup).
+
+## 2.6 Insert Images
+
+htmltools has an easy way of outputting images in the document as well. Here is some sample code of how this works:
+
+```{r}
+htmltools::img(src = knitr::image_uri(file.path('E:/Pics/address_code.png')))
+```
+
+<br>
+
+# 3 Tab Setting
+
+Tab setting is a good way of not letting a large amount of tables clutter up a document by having to scroll endlessly through them.  There are a few cool ways to do this.
+
+For the section you want to add tabs under you can use the following for a nice tabbed section:
+
+```
+# Header {.tabset .tabset-fade}
+
+## Tab 1
+
+content
+
+## Tab 2
+
+content
+
+# Next Header
+```
+
+There is also a dropdown option where you can use the following code to get a drop down menu to select tabs, instead of having to have them all visible.  This is nice for a large number of tables.
+
+
+```
+# Header {.tabset .tabset-dropdown}
+
+## Tab 1
+
+content
+
+## Tab 2
+
+content
+
+# Next Header
+```
+
+<br>
+
+## 3.1 Tab Example 1 {.tabset .tabset-fade}
+
+This will set the tabs, where the one that is selected will come to the front.
+
+```{r}
+setosa <- iris %>% filter(Species == "setosa")
+versicolor <- iris %>% filter(Species == "versicolor")
+virginica <- iris %>% filter(Species == "virginica")
+simple_scroll_tbl <- function(df){
+  tbl <- kable(df) %>%
+    kable_styling(bootstrap_options = c("hover", "striped")) %>% 
+    scroll_box(height = '550px')
+  return(tbl)
+}
+```
+
+<br>
+
+### Setosa
+
+```{r}
+simple_scroll_tbl(setosa)
+```
+
+<br>
+
+### Versicolor
+
+```{r}
+simple_scroll_tbl(versicolor)
+```
+
+<br>
+
+### Virginica
+
+```{r}
+simple_scroll_tbl(virginica)
+```
+
+<br>
+
+
+## 3.2 Tab Example 2 {.tabset .tabset-dropdown}
+
+This will set the tabs, where each one will have its own selection on the dropdown menu.
+
+<br>
+
+### Setosa
+
+```{r}
+simple_scroll_tbl(setosa)
+```
+
+<br>
+
+### Versicolor
+
+```{r}
+simple_scroll_tbl(versicolor)
+```
+
+<br>
+
+### Virginica
+
+```{r}
+simple_scroll_tbl(virginica)
+```
+
+<br>
+
+# 4 Formattable Overview
+
+Formattable is a package available on CRAN that I use a good amount for just a few useful functions. 
+
+<br>
+
+## 4.1 Percent
+
+The percent function is the best way that I've found to deal with displaying percentages, without using paste.  This also allows to turn the percentage values back into numeric without any hassle.
+
+```{r}
+virginica <- iris %>% 
+  filter(Species == "virginica")
+
+virg_pct <- percent(nrow(virginica)/nrow(iris), 2)
+
+virg_pct
+```
+
+<br>
+
+The best part about this, is that it can be turned back into a numeric value, where it would be hard to do that if this percentage was pasted.
+
+```{r}
+as.numeric(virg_pct)
+```
+
+<br>
+
+## 4.2 Color Bar
+
+*formattable* also has a nice functions to help use color bars, which is missing from *kableExtra*. There are other functions for other formatting columns in the *formattable* packge, but I find the logic in *kableExtra* much more simpler and straight forward.
+
+```{r}
+# This just creates a simple aggregated table
+
+agg_tbl <- iris %>% 
+  group_by(Species) %>% 
+  dplyr::summarise(Avg_Sepal_Length = mean(Sepal.Length),
+                   Avg_Sepal_Width = mean(Sepal.Width),
+                   Avg_Petal_Length = mean(Petal.Length),
+                   Avg_Petal_Width = mean(Petal.Width))
+
+kable(agg_tbl) %>% kable_styling()
+```
+
+<br>
+
+You can use a few different methods to choose colors for the color bars.  Here is a nice PDF with all the colors available in R: [R Colors](http://www.stat.columbia.edu/~tzheng/files/Rcolor.pdf)
+
+The second option is to use hex coloring.  This has a very large selection you can have to your liking.  Both of these options are available for the *formmattable* functions and for the *kable* functions.
+
+```{r}
+color_bar_tbl <- agg_tbl %>% 
+  mutate(Avg_Petal_Width = color_bar("cyan")(`Avg_Petal_Width`),
+         Avg_Petal_Length = color_bar("#FFA99C")(`Avg_Petal_Length`))
+```
+
+```{r}
+kable(color_bar_tbl,
+      "html",
+      align = c('l', 'r', 'r', 'r', 'r')) %>% 
+  kable_styling()
+```
+
+<br>
+
+If ```escape = F``` is not included in the *kable* function, it will just return HTML code.  Including it will render the color bar correctly.
+
+```{r}
+kable(color_bar_tbl,
+      "html",
+      escape = F,
+      align = c('l', 'r', 'r', 'r', 'r')) %>% 
+  kable_styling()
+```
+
+<br>
+
+# 5 Kable
+
+A really good link for an overview of some cool things that the kable and kableExtra package can do can be found here: [kableExtra](https://haozhu233.github.io/kableExtra/awesome_table_in_html.html#Overview)
+
+So I'll just go through a few ones that I've used in my regular work.
+
+```{r}
+# Read in some meaningful data
+phone_mod_comp <- readRDS("./files/phone_model_comparison.RDS")
+phone_bivariates <- readRDS("./files/cnam_bivariates.RDS")
+```
+
+<br>
+
+## Bivariate Reports
+
+This is an example of a phone bivariate report that I use some of the kableExtra functions to output.  However, this could easily be applied to some of the other bivariates for other use cases.
+
+Here would be an example of just outputting the bivariate without much styling:
+
+```{r}
+kable(phone_bivariates$cnam_lname_flag) %>% 
+  kable_styling()
+```
+
+<br>
+
+Since this is a very common procedure for my daily work, I just made a function to style to table so it looked real nice using a few things:
+
+1. Getting indexes of certain columns so that they can be operated on (```which(str_detect(colnames(df), "Ver"))```)
+2. ```bootstrap_options``` to make the table striped and highlight slightly with a mouse over it.
+3. Some simple coloring of specific columns (note: "color" means text coloring of that column/row)
+4. Adding a scroll bar, so the table stays contained.
+
+```{r}
+phone_bv_tbl <- function(df, var_name = '', var_cnt = 1, ver_color = "#18B200", disc_color = "#FF6A6A",  width_col = "5cm", scroll_width = "900px"){
+
+  tbl_df <- df
+  var_name <- ifelse(var_name == '', colnames(df)[1:var_cnt], var_name)
+
+  ver_cols <- which(str_detect(colnames(df), "Ver"))
+  disc_cols <- which(str_detect(colnames(df), "Disc"))
+  wp_cols <- which(str_detect(colnames(df), "Wrong"))
+  mach_cols <- which(str_detect(colnames(df), "Machine"))
+  noans_cols <- which(str_detect(colnames(df), "NoAnswer"))
+  cont_cols <- which(str_detect(colnames(df), "Contact"))
+  tot_cols <- which(str_detect(colnames(df), "Total"))
+  oth_cols <- which(str_detect(colnames(df), "Other"))
+  
+  tbl_cols <- c("Total #", "Total %", "Total Cum %", "Contact #", "Contact %", "Contact Cum %",
+                "Verified #", "Verified %", "Verified Cum %", "Disc #", "Disc %", "Disc Cum %",
+                "Wrong Party #",  "Wrong Party %", "Wrong Party Cum %", "Machine #", "Machine %", "Machine Cum %",
+                "No Answer #", "No Answer %", "No Answer Cum %", "Other #", "Other %", "Other Cum %")
+  
+  tbl_scroll <- kable(tbl_df, "html",
+                      col.names = c(var_name, tbl_cols),
+                      align = c(rep('c', var_cnt), rep(c('r','r', 'r'), 8))) %>%
+    kable_styling(bootstrap_options = c('striped', 'hover')) %>%
+    row_spec(0, bold = T, color = "white", background = "lightskyblue", align = 'c') %>%
+    column_spec(ver_cols, background = ver_color, bold = TRUE, width_min = "2.5cm") %>%
+    column_spec(disc_cols, background = disc_color, bold = TRUE, width_min = "2cm") %>%
+    column_spec(c(mach_cols, noans_cols), width_min = "3cm") %>%
+    column_spec(c(cont_cols, oth_cols), width_min = "2.5cm") %>%
+    column_spec(tot_cols, width_min = "2cm") %>%
+    column_spec(wp_cols, width_min = "4cm") %>%
+    column_spec(1:var_cnt, color = "#FCFCFC", background = "#989898", width_min = width_col) %>%
+    scroll_box(width = scroll_width)
+
+  return(tbl_scroll)
+}
+```
+
+<br>
+
+Here is the new table that is formatted:
+
+
+```{r}
+phone_bv_tbl(phone_bivariates$cnam_lname_flag)
+```
+
+<br>
+
+## Performance {.tabset .tabset-fade}
+
+Below is a sample of the output for comparing two competing phone models.  There are some stats around KS, and the certain rates of different dialing results for top ranked phones for a specific person.
+
+```{r}
+perf_tbl <- function(df, header_font = "white", header_bg = "lightskyblue",
+                     perf_col_font = "#FCFCFC", perf_col_bg = "#989898",
+                     column_names = c("Performance Measure", "Base Model", "Challenger", "Lift")){
+  tbl <- kable(df,
+               "html",
+               escape = F,
+               col.names = column_names,
+               align = c('l', 'r', 'r', 'r')) %>%
+    kable_styling(bootstrap_options = c('striped', 'hover'), full_width = F) %>%
+    row_spec(0, bold = T, color = header_font, background = header_bg, align = 'c') %>%
+    column_spec(4, bold = T) %>%
+    column_spec(1, color = perf_col_font, background = perf_col_bg)
+
+  return(tbl)
+}
+```
+
+### KS 
+
+```{r}
+perf_tbl(phone_mod_comp$KS)
+```
+
+<br>
+
+### First Party
+
+```{r}
+perf_tbl(phone_mod_comp$FPC_Summ)
+```
+
+<br>
+
+
+### Third Party
+
+```{r}
+perf_tbl(phone_mod_comp$TPC_Summ)
+```
+
+<br>
+
+### Fraud
+
+```{r}
+perf_tbl(phone_mod_comp$Fraud_Summ)
+```
+
+<br>
+
+
+# 6 DT
+
+The kable and kableExtra packages can make some really nice looking tables, but they are not great for tables that need to be searched or filtered easily.  This is where the DT package can be extremely useful.
+
+This package can output tables as an HTML widget.  This widget can be filter-able and search-able.
+
+See the table example below:
+
+<br>
+
+
+```{r}
+correlation_df <- readRDS("./files/phonefinder_emailage_corr.RDS") %>%
+  mutate(across(.cols = ends_with("_Corr"), .fns = function(x) round(x, 5)))
+
+datatable(correlation_df, 
+          colnames = c("Risk Indicator", "Description", "PhoneRiskLevel Corr", "ID Score Corr")) %>% 
+  formatStyle(columns = c("PhnRiskLevel_Corr", "IDScore_Corr"), fontWeight = 'bold', `text-align` = 'right')
+```
+
+
+A helpful link for more customize-able examples in the DT package can be found here: [DT walkthrough](https://rstudio.github.io/DT/)

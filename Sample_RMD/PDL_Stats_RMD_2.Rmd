@@ -1,0 +1,206 @@
+---
+title: "PDL Phone Content Test"
+author: "Brett Olson"
+date: "2/18/2021"
+output:
+  html_document:
+    toc: true
+    toc_float: true
+---
+
+```{r, echo=FALSE}
+htmltools::img(src = knitr::image_uri(file.path('E:/Pics/Logo.png')), 
+               alt = 'logo', 
+               style = 'position:absolute; top:0; right:0;')
+```
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = FALSE, message = FALSE, warning = FALSE)
+```
+
+```{r libraries}
+library(kableExtra)
+library(tidyverse)
+library(formattable)
+library(GenPack)
+library(janitor)
+```
+
+# **Overview**
+
+Content testing using KEL ENTITY's is going to be an essential part of evaluating sources moving forward with this new data infrastructure.  This document outlines a very short example of how we would do something like this using KEL, and compare it to the way that data engineering evaluates new data sources.  
+
+This proof of concept is based on the phone evaluation of phones received from People Data Labs. People Data Labs gives us a bunch of different data elements including names, emails, DOBs, etc., but phones seemed to be a good exercise to go through, since most of it is pretty simple.  In addition, our Phone ENTITY has most of the keys in it, that the data engineering teams checks against.
+
+
+# **Process**
+
+The process that data engineering goes through to evaluate phones has been as closely mimicked utilizing our KEL Phone ENTITY as it can be.  These two evaluations are done in two different environments. Data engineering runs in Production and this evaluation is done in Vault, so that is why there might be some small variations in counts and hit rates.  Also, the evaluation was done in April 2020 by data engineering, and the Phone ENTITY data was pulled in August of 2020.
+
+<br>
+
+**KEL Process:**
+
+1. Create input file that we want to run through the ENTITY/ASSOCIATIONS.
+    + In this case, it is a set of PDL phones (~10.7 million).
+2. Write a QUERY to pull back all data in the Phone ENTITY that matches the phones in the input file.
+3. Separate child datasets.
+    + The file that comes out of the QUERY is not flat, so each child dataset must be separated.
+4. Subset fields that will be used for analysis, and aggregate as necessary.  This isn't necessarily needed but will be useful before despraying, when using large datasets.
+5. Despray files and evaluate how we match the new data with our existing LN data.
+
+<br>
+
+# **Evaluation Summary**
+
+<br>
+
+* There were **~10.7** million unique phone numbers in the PDL file.
+    + Very close hit rates for phones were observed comparing the Phone ENTITY to the Data Engineering macro output.
+* Of those 10.7 million phones, **54.8%** were cell phones, **41.2%** were landlines, and **1.2%** were VOIP (~3.5% we did not have a type).
+    + The metadata phone key was not used, and this will increase hit rates.  This key has since been added to the Phone ENTITY.
+    + There was some overlap of phone types within the ENTITY records (i.e. VOIP/Landline), but not a lot.
+* **6.49%** of PDL phones overlapped with Gong Current, and another **88.44%**  overlapped with PhonesPlus.
+    + Gong Current is defined as coming from the Gong phone key (thor_data400::key::gong_history_phone_qa), and filter by current_record_flag = 'Y'.
+    + Only records that have the source code of "GN" in the Gong phone key will have a current_record_flag = 'Y'.
+* **96.33%** of PDL phones were found in our Phone ENTITY in some capacity (not including metadata).
+* Overall, the results between the data engineering team and the Phone ENTITY pull are similar enough for a proof of concept to be valid.
+
+
+<br>
+
+# **Stats**
+
+The following tables and stats are going to be an attempt to match up how data engineering evaluates sources with how we would in the KEL world.  The tables on the left side are going to be our Phone ENTITY data pull, and on the right will be the stats from the data engineering evaluation.
+
+<br>
+
+## Phone Types
+
+These phone types are coming from the *phonetype* field in our ENTITY, and when that is unavailable, the *nxxtype* is used. 
+
+There are two notes on the differences between these two tables:
+
+1. There are a lot of "NA" phones (~3.5%) in the Phone ENTITY.  This is because metadata is not used to determine phone types, but IS in the data engineering version.
+2. The VOIP percentage is a lot higher in the Phone ENTITY pull.  The explanation for this is not evident.
+
+<br>
+
+```{r}
+phone_type <- readRDS('./stats/phone_type_freq.RDS')
+phone_type <- phone_type[c(2,4,6,8,5,3,7,9,1),] %>% 
+  adorn_totals()
+
+kable(phone_type,
+      caption = "Phone ENTITY",
+      col.names = c('Phone Type', '# of Phones', '% of Phones')) %>% 
+  kable_styling(bootstrap_options = c('hover', 'striped'), full_width = F, position = 'float_left') %>% 
+  row_spec(0, background = 'lightskyblue', color = 'white') %>% 
+  column_spec(3, bold = T)
+
+phone_type_chris <- data.frame(type = phone_type$phonetype[1:9],
+                               count = c(5846617, 101744, 4654943, 16806, 37205, 15, 433, 41521, 3440)) %>% 
+  mutate(type = ifelse(is.na(type), 'INVALID-NPA/NXX/TB', type)) %>% 
+  mutate(percent = percent(count/sum(count),2)) %>% 
+  adorn_totals()
+
+kable(phone_type_chris,
+      caption = "ECL Data Engineering",
+      col.names = c('Phone Type', '# of Phones', '% of Phones')) %>% 
+  kable_styling(bootstrap_options = c('hover', 'striped'), full_width = F, position = 'right') %>% 
+  row_spec(0, background = 'lightskyblue', color = 'white') %>% 
+  column_spec(3, bold = T)
+```
+
+<br>
+
+## Sources
+
+The straight up hit rates for each specific source was not analyzed by data engineering.  Only waterfall hit rates were examined, but it is nice to see this outlined.  Especially, considering such a high rate of phones in Gong History.  That indicates that a lot of these phones are old or historical.
+
+<br>
+
+```{r}
+sources_all <- readRDS('./stats/source_freq_active.RDS')
+kable(sources_all,
+      caption = "Phone ENTITY",
+      col.names = c('Source', '# of Phones', '% of Phones')) %>% 
+  kable_styling(bootstrap_options = c('hover', 'striped'), full_width = F, position = 'left') %>% 
+  row_spec(0, background = 'lightskyblue', color = 'white') %>% 
+  column_spec(3, bold = T)
+```
+
+<br>
+
+## Waterfall Hit Rates
+
+To see how many of the phones in the input file overlap with our sources, there is a waterfall logic used.  The hit rates match up quite nicely especially with differing environments.  
+
+Data engineering checks a few more sources that were not available in the Phone ENTITY at the time this data was pulled.  Their extra checks, denoted in the table as "Other Sources" include: Person Header, Business Contacts, Business Header, and Canadian.
+
+<br>
+
+
+```{r}
+trickle_all <- readRDS('./stats/trickle_hit_active.RDS') %>% 
+  adorn_totals()
+
+kable(trickle_all,
+      caption = "Phone ENTITY",
+      col.names = c('Source', '# of Phones', '% of Phones')) %>% 
+  kable_styling(bootstrap_options = c('hover', 'striped'), full_width = F, position = 'float_left') %>% 
+  row_spec(0, background = 'lightskyblue', color = 'white') %>% 
+  column_spec(3, bold = T)
+
+trickle_chris <- data.frame(type = c(trickle_all$Sources[1:4], "Other Sources", "No Source"),
+                            count = c(729114, 9415732, 147101, 7077, 59389, 323740)) %>% 
+  mutate(percent = percent(count/sum(count),2)) %>% 
+  adorn_totals()
+
+kable(trickle_chris,
+      caption = "ECL Data Engineering",
+      col.names = c('Source', '# of Phones', '% of Phones')) %>% 
+  kable_styling(bootstrap_options = c('hover', 'striped'), full_width = F, position = 'right') %>% 
+  row_spec(0, background = 'lightskyblue', color = 'white') %>% 
+  column_spec(3, bold = T)
+
+```
+
+<br>
+
+## Listing Types
+
+The listing types are compared below.  Only listing types of the "Gong Current" phones are displayed here.  
+
+These listing types do not line up as exact as would be desired.  The reason for this might be that different logic is used.  Phones are able to have several bell listing types, so the Phone ENTITY version is using a waterfall of R (residential), B (business), and then G (government).  The data engineering might be different, so that could explain the discrepancies.
+
+<br>
+
+
+```{r}
+listing <- readRDS('./stats/listing_type_active.RDS')
+
+kable(listing,
+      caption = "Phone ENTITY",
+      col.names = c('Source File', 'Current Record', 'Bell Listing Type', '# of Phones')) %>% 
+  kable_styling(bootstrap_options = c('hover', 'striped'), full_width = F, position = 'left') %>% 
+  row_spec(0, background = 'lightskyblue', color = 'white') %>% 
+  column_spec(4, bold = T)
+
+
+listing_chris <- data.frame(source = rep("GN", 3),
+                            currentrec = rep("Y", 3),
+                            bell = c("B", "G", "R"),
+                            count = c(122206, 322, 606586))
+
+kable(listing_chris,
+      caption = "ECL Data Engineering",
+      col.names = c('Source File', 'Current Record', 'Bell Listing Type', '# of Phones')) %>% 
+  kable_styling(bootstrap_options = c('hover', 'striped'), full_width = F, position = 'left') %>% 
+  row_spec(0, background = 'lightskyblue', color = 'white') %>% 
+  column_spec(4, bold = T)
+```
+
+<br>
+
+*Note: There are also listing types of "BR", "RB", "GB", etc. This made it very difficult to discern which listing type to use.*

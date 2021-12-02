@@ -1,0 +1,320 @@
+---
+title: "Phone Finder Name Match Logic (PHZONE-1197)"
+author: "Brett Olson"
+date: "`r format(Sys.time(), '%m/%d/%y')`"
+output:
+  html_document:
+    toc: true
+    toc_float: true
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = FALSE, warning = FALSE, message = FALSE)
+options(scipen = 999)
+```
+
+
+```{r libraries}
+library(tidyverse)
+library(DT)
+library(data.table)
+library(fmtools)
+library(knitr)
+library(LNRSPhones)
+library(kableExtra)
+```
+
+```{r data}
+stats <- readRDS("./rmd_files/pf_name_stats.RDS")
+```
+
+
+# Introduction
+
+Phone Finder wants to improve the robustness of the name verification option on the phone search functionality, when there is a name on input.  There are a good amount of failed name verification cases, that could easily be passing if given the right criteria checks.
+
+All Phone Finder transactions that used the name verification option (*verification_type*=NAME) and failed for that verification type (*phone_verified*=0) for a months worth of transactions were pulled to do this analysis.  The date range is from 9/14/2021-10/14/2021.  The JIRA ticket for the data pull is here for reference: [PHZONE-1210](https://jira.rsi.lexisnexis.com/browse/PHZONE-1210).
+
+There were **~669k** transactions with failed name verification in that months time.  Of those 669k transactions, about **303k** are distinct submitted and returned name combinations, and of those 303k distinct transactions **~267k** have names that are populated on input and are populated from Phone Finder. Those 267k transactions are the ones that will be analyzed here.
+
+The reference ticket for this analysis is here: [PHZONE-1197](https://jira.rsi.lexisnexis.com/browse/PHZONE-1197)
+
+<br>
+
+# 1 Bugs
+
+There was some initial cleaning, mainly just deleting leading and trailing spaces.  This was done before any name matching was applied.  However, of those 267k distinct matching transactions, **`r stats[["Bug_Match"]] %>% nrow()`** were exact matches for the submitted full name and the returned full name (after minimal cleaning).  Not quite sure why these matches are not being captured by Phone Finder, however. 
+
+Examples of this occurrence are below:
+
+```{r}
+datatable_fmt_fun <- function(df){
+  tbl <- datatable(df, rownames=F, class="cell-border stripe", options=list(pageLength=5, scrollX = TRUE), width = 850)
+  return(tbl)
+}
+datatable_fmt_fun(stats[["Bug_Match"]])
+```
+
+<br>
+
+*Note: The difference between full_name and full_name_return, is that full_name is after cleaning, and full_name_return is exactly what Phone Finder pulls back.*
+
+<br>
+
+# 2 Extra Verification
+
+There is improvements that could help with more verification of names, just by taking into account the format of names returned in the LNRS database. 
+
+Some names are returned in surname form from LNRS records (especially those without LexIDs).  This could be a simple fix when there is a comma in the returned full name.
+
+Also, there is a lot of variation in names, for example, surnames without commas, added suffixes, double last names, etc.  A lot of these mistakes can be minimized by a few rules outline below.
+
+<br>
+
+## 2.1 Surname Format
+
+There is a total of **`r stats[["Num_Sur_LN"]] %>% nrow()`** returned names from Phone Finder that are in a surname format (~**`r percent((stats[["Num_Sur_LN"]] %>% nrow())/359749)`**).  A good amount of these actually should be matches, but right now are considered failing.  If a check for surnames was added, there could be an additional **`r stats[["Sur_LN"]] %>% nrow()`** names verified.
+
+Below are the examples of names that would be added from using this surname check:
+
+<br>
+
+```{r}
+datatable_fmt_fun(stats[["Sur_LN"]])
+```
+
+<br>
+
+## 2.2 Name Searching
+
+A somewhat easy fix would be to pass name checks if the submitted first name is completely found inside the returned name, AND the last name is completely found inside the returned name.  This seems like it might give false positives, but looking at the matches case by case, there is almost always a good match.  This would add another **`r stats[["Srch"]] %>% nrow()`** name verification records.
+
+The only other restriction that might be useful, is that both the first and last submitted name must be at least 2 characters long to avoid matching on just initials. If this restriction was enforced, the number of name verification records with this extra check would go down to **`r stats[["Srch"]] %>% filter(nchar(submitted_firstname) > 1 & nchar(submitted_lastname) > 1) %>% nrow()`**.
+
+A lot of the new matches are either surname formatted names or names with middle initials.
+
+
+Below are the examples of names that would be added from using this string search:
+
+<br>
+
+```{r}
+datatable_fmt_fun(stats[["Srch"]])
+```
+
+
+## 2.3 Fuzzy Matching Algorithms {.tabset .tabset-fade}
+
+There are a couple algorithms that could be checked to add an additional check for name verification.  There is Levenshtein distance and Jaro-Winkler distance.
+
+Below are the overviews of each.
+
+### Levenshtein Similairity
+
+Levenshtein similarity is an algorithm that is a spin on the levenshtein distance calculation to take into consideration strings of different lengths.  Levenshtein distance works well with 2 strings of fixed length (such as SSN or phone number), but can be inconsistent when the strings being compared are not fixed.  Therefore, we use the levenshtein similarity equation.  
+
+Levenshtein distance is the minimum amount of edits (insertions, deletions, or substitutions) to change one string into the other (i.e. LEXIS to NEXIS is distance 1, and HONDA to HYUNDAI is distance 3). 
+
+Levenshtein similarity is defined by the equation below:
+
+$$Sim_{a,b} = 1 - \frac{d(a,b)}{max(A,B)}$$
+
+In this equation $d(a,b)$ is equal to the levenshtein distance of strings $a$ and $b$.  $A$ and $B$ are the lengths of strings $a$ and $b$.
+
+Thus, or our LEXIS vs. NEXIS example, we would have a Levenshtein similarity of 0.8.
+
+<br>
+
+### Jaro-Winkler
+
+Jaro-Winkler is also an algorithm to compare distance of two strings.  This is a very widely used algorithm for name matching. The reason for that, is that it places more weight on the beginning of the strings.  For first names and last names, this could be helpful, considering first names can be as short as 3 or 4 characters and don't really have more than 10 characters regularly.  
+
+First you have to take the Jaro distance, which is similar to the levenshtein similarity.  The equation for Jaro is below:
+
+$$Sim_{j} = \frac{1}{3}\left(\frac{m}{|s_{1}|}+\frac{m}{|s_{2}|}+\frac{m-t}{m}\right)$$
+
+Where:
+
+* $|s_i|$ is the length of the string $|s_i|$;
+* $m$ is the number of matching characters
+* $t$ is half the number of transpositions
+  + The number of matching (but different sequence order) characters divided by 2 defines the number of transpositions
+  
+Then, we add an extra calculation to use the prefix matching to give more favorable scores to names that match more at the beginning of the string. The Jaro-Winkler similarity is then defined below:
+
+$$Sim_{w} = Sim_{j} + \ell p(1-sim_{j})$$
+
+Where:
+
+* $Sim_{j}$ is the Jaro similarity for strings $s_1$ and $s_2$
+* $\ell$ is the length of common prefix at the start of the string up to a maximum of four characters
+* $p$ is a constant scaling factor for how much the score is adjusted upwards for having common prefixes. $p$ should not exceed 0.25, otherwise the similarity could become larger than 1. The standard value for this constant in Winkler's work is $p = 0.1$ and that is what we use here
+
+Finally, the Jaro-Winkler distance is defined here:
+
+$$D_{w} = 1 - Sim_{w}$$
+<br>
+
+## 2.4 Fuzzy Examples/Thresholds Lev {.tabset .tabset-fade}
+
+A threshold for how similar the strings are needs to be set for to create a match vs. a non-match.  This isn't necessarily very black and white, but is more of figuring out how loose it can be before it feels like it is verifying bad data.
+
+Here is the amount of additional verified names that come with each threshold:
+
+* Threshold 0.75: **`r nrow(stats[["FullName_Lev_75"]])`**
+* Threshold 0.8: **`r nrow(stats[["FullName_Lev_8"]])`**
+* Threshold 0.85: **`r nrow(stats[["FullName_Lev_85"]])`**
+* Threshold 0.875: **`r nrow(stats[["FullName_Lev_875"]])`**
+* Threshold 0.9: **`r nrow(stats[["FullName_Lev_9"]])`**
+
+
+Below are some examples of the different thresholds for the Levenshtein similarity matching that we would be adding.
+
+<br>
+
+### 0.75
+
+```{r}
+datatable_fmt_fun(stats[["FullName_Lev_75"]])
+```
+
+<br>
+
+### 0.8
+
+
+```{r}
+datatable_fmt_fun(stats[["FullName_Lev_8"]])
+```
+
+
+<br>
+
+### 0.85
+
+
+```{r}
+datatable_fmt_fun(stats[["FullName_Lev_85"]])
+```
+
+<br>
+
+
+### 0.875
+
+
+```{r}
+datatable_fmt_fun(stats[["FullName_Lev_875"]])
+```
+
+<br>
+
+### 0.9
+
+
+```{r}
+datatable_fmt_fun(stats[["FullName_Lev_9"]])
+```
+
+
+<br>
+
+## 2.5 Fuzzy Examples/Thresholds JW {.tabset .tabset-fade}
+
+The same threshold setting should be looked at for the Jaro-Winkler value as well.  The values for this metric tend to be a little higher on average, so higher thresholds will be use here.
+
+Here are the amount of more verified names come with each threshold:
+
+* Threshold 0.8: **`r nrow(stats[["FullName_JW_8"]])`**
+* Threshold 0.85: **`r nrow(stats[["FullName_JW_85"]])`**
+* Threshold 0.9: **`r nrow(stats[["FullName_JW_9"]])`**
+* Threshold 0.95: **`r nrow(stats[["FullName_JW_95"]])`**
+
+
+Below are some examples of the different thresholds for Jaro-Winkler matching that we would be adding.
+
+<br>
+
+### 0.8
+
+```{r}
+datatable_fmt_fun(stats[["FullName_JW_8"]])
+```
+
+<br>
+
+### 0.85
+
+
+```{r}
+datatable_fmt_fun(stats[["FullName_JW_85"]])
+```
+
+
+<br>
+
+### 0.9
+
+
+```{r}
+datatable_fmt_fun(stats[["FullName_JW_9"]])
+```
+
+<br>
+
+### 0.95
+
+
+```{r}
+datatable_fmt_fun(stats[["FullName_JW_95"]])
+```
+
+
+<br>
+
+
+## 2.6 Fuzzy Examples Reverse Lev
+
+The name cleaner in the LNRS code is not perfect.  Therefore, there should be some leniency on which name is considered first and which name is considered last.  Therefore, the threshold that gets set for fuzzy matching should be applied both ways.
+
+Below are some examples that did not pass the initial check of 0.875 for Levenshtein similarity, but would pass that threshold if they were checked with last name first and first name last.
+
+Setting this secondary rule would add another **`r nrow(stats[["FullName_Rev_Lev_875"]])`** verified names.
+
+<br>
+
+
+```{r}
+datatable_fmt_fun(stats[["FullName_Rev_Lev_875"]])
+```
+
+<br>
+
+# 3 Final Logic
+
+
+Here is the final proposed logic and the outcome that it would produce with these Phone Finder results.
+
+1) Fix the bug in section 2.1.  Exact name matches should be passing.
+2) Pass exact matches that are in surname format
+3) Pass cases where first name is contained fully in the full name and last name is contained fully in the full name.
+4) Use Levenshtein similarity threshold (proposed 0.875) to pass typos that are very close. This is done comparing submitted full name to returned full name.
+5) Use Levenshtein similarity threshold (proposed 0.875) to pass reversed first and last names.  This is done comparing flipped submitted first/last name to returned full name.
+
+If all these rules are applied **3.65%** of the failing transactions could be passes for name verification.
+
+Below shows the extra verification that would be added to the 267k transactions:
+
+<br>
+
+```{r}
+stats[["Final_Logic"]] %>% 
+  kable(., "html", 
+        escape = F,
+        align = c('l', 'c', 'c'),
+        col.names = c("Verification Type", "Added Pass Cnt", "Added Pass Pct")) %>%
+  kable_styling(bootstrap_options = c('striped', 'hover'), full_width = F) %>%
+  row_spec(0, bold = T, color = "white", background = "lightskyblue", align = 'c') %>% 
+  column_spec(1, color = "#FCFCFC", background = "#989898") %>% 
+  column_spec(3, bold = TRUE)
+```

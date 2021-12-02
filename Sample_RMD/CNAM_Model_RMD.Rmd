@@ -1,0 +1,344 @@
+---
+title: "CNAM in Phone Model (PHZONE-1077)"
+author: "Brett Olson"
+date: "`r format(Sys.time(), '%m/%d/%y')`"
+output:
+  html_document:
+    toc: true
+    toc_float: true
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = FALSE, warning = FALSE, message = FALSE)
+options(scipen = 999)
+```
+
+
+```{r libraries}
+library(tidyverse)
+library(DT)
+library(data.table)
+library(fmtools)
+library(knitr)
+library(LNRSPhones)
+library(kableExtra)
+```
+
+```{r data}
+bv_list <- readRDS("./rmd_files/cnam_bv_list.RDS")
+model_comp <- readRDS("./rmd_files/model_comp.RDS")
+model_comp_top <- readRDS("./rmd_files/model_comp_top_five.RDS")
+model_imp <- readRDS("./rmd_files/mod_imp_list.RDS")
+```
+
+
+# Introduction
+
+CNAM is a call that has previously been made outside of the Phone Shell that provides a caller ID for the phone in question.  This document looks to see what kind of lift adding this data would give to our phone score.
+
+**Data:** All phones for the July 2021 dial file were run through this CNAM call to append caller ID.  
+
+The ticket for reference of this research is here: [PHZONE-1200](https://jira.rsi.lexisnexis.com/browse/PHZONE-1200)
+
+<br>
+
+# New Attributes {.tabset .tabset-fade}
+
+There are a few different ways that variables can be created from this data:
+
+* Name matching (exact and similarity metrics)
+* Flag bad data (i.e. 'UNKNOWN', 'PRIVATE', 'ATT')
+* Flag City/State (i.e. 'TUSCON, AZ', 'AUSTIN, TX')
+
+
+Basically, all attributes trend well with high verification rates and low wrong party rates.  Disconnects do not seem to be as easily identified with the name matching but are identified well with the bad ID flag and the city/state flag.
+
+<br>
+
+## Name matching {.tabset .tabset-dropdown}
+
+A more robust version of name parsing will be used in production before the matching logic will be put in place (possibly use name cleaner in ECL).  
+
+There are a few variables used to evaluate the name matching.  There are exact matching flags (i.e. first name exact match), and there are string similarity matching metrics.  The string similarity matching metric that is used is the Jaro-Winkler string comparison algorithm (see appendix for information on this algorithm).  On a basic level, the Jaro-Winkler value is a 0 - 1 value that shows how similar the two strings are, in this case input name and caller ID name.
+
+*Note: For first name matching, nicknames were included (Jim = James).*
+
+Below are the performance of all the variables created for name matching:
+
+<br>
+
+### First Name Match Flag
+
+```{r}
+phone_bv_tbl(bv_list[["cnam_fname_nick_flag"]], var_name = "CNAM_FName_Match")
+```
+
+<br>
+
+### Last Name Match Flag
+
+```{r}
+phone_bv_tbl(bv_list[["cnam_lname_flag"]], var_name = "CNAM_LName_Match")
+```
+
+<br>
+
+### Full Name Match Flag
+
+```{r}
+phone_bv_tbl(bv_list[["cnam_fullname_flag"]], var_name = "CNAM_FullName_Match")
+```
+
+<br>
+
+### First Name Jaro-Winkler
+
+```{r}
+phone_bv_tbl(bv_list[["cnam_fname_jw"]], var_name = "CNAM_FName_JW")
+```
+
+<br>
+
+### Last Name Jaro-Winkler
+
+```{r}
+phone_bv_tbl(bv_list[["cnam_lname_jw"]], var_name = "CNAM_LName_JW")
+```
+
+<br>
+
+### Full Name Jaro-Winkler
+
+```{r}
+phone_bv_tbl(bv_list[["cnam_fullname_jw"]], var_name = "CNAM_FullName_JW")
+```
+
+<br>
+
+## Flag bad data
+
+This flag is created to aggregate the common occurences of non-name caller ID's returned from CNAM.  The top 200 most common occurences that were not city/state combos or names were used here.  The following is the list of these: 
+
+*WIRELESS CALLER*, *Q LINK WIRELESS*, *PRIVATE*, *U.S. CELLULAR*, *UNKNOWN*,  *ATT*, *BANK OF AMERICA*, *UNAVAILABLE*, *NAME*, *JPMORGAN CHASE*
+
+Below is the performance for this flag:
+
+```{r}
+phone_bv_tbl(bv_list[["cnam_bad_id"]], var_name = "CNAM_Bad_ID")
+```
+
+<br>
+
+## Flag City/State
+
+This flag is activated when the caller ID is a city/state.  Below is the performance of this flag:
+
+```{r}
+phone_bv_tbl(bv_list[["cnam_state_flag"]], var_name = "CNAM_State_Flag")
+```
+
+<br>
+
+# CNAM Models
+
+There are a couple of ways to use this CNAM data since it is a gateway call, and thus will cost money to hit everytime.  Therefore, there are two different model implementations that are proposed here.  
+
+**1)** The first is a regular model including all phone shell attributes, and then adding the CNAM variables to the mix.  Unless this data is going to be implemented into the phone shell in all cases, I suggest this is probably not the route to go.  The reason for that is if CNAM was only called in some cases, there would need to be two models maintained for every change (w/ and w/o CNAM).
+
+**2)** The second is a secondary model on top of the current 3.1 model being pushed into production.  The first step would take in the model score in production and rank phones.  Then, it would use the top 5 scoring phones for that account and then run those through the new model that used the original phone score and new CNAM variables to re-rank phones.
+
+<br>
+
+## Regular Model
+
+This is an overview of the model that uses all phone shell attributes in addition with the new CNAM variables outlined in the previous section.  
+
+The comparison that will be used is a base model with current phone shell variables vs. a new model containing CNAM variables, both built on the sam July training data.  This new model will not be compared to the current production model, since that would not be a fair comparison, since the new CNAM model will have been built on part of this sample.
+
+<br>
+
+### Performance {.tabset .tabset-fade}
+
+Below is the performance for the base model vs. the CNAM model.  The areas that are compared are KS (higher the better), and then contact/verified/disconnect/wrong party for the top position phone for the holdout sample.  The sub-samples that are used are First Party Collections, Third Party Collections, and Fraud.
+
+<br>
+
+#### KS
+
+```{r}
+perf_tbl(model_comp[["KS"]], column_names = c("Party", "Base KS", "CNAM KS", "KS Lift"))
+```
+
+<br>
+
+#### All Accounts
+
+```{r}
+perf_tbl(model_comp[["All_Summ"]], column_names = c("Performance Measure", "Base", "CNAM", "Lift"))
+```
+
+<br>
+
+#### FPC
+
+```{r}
+perf_tbl(model_comp[["FPC_Summ"]], column_names = c("Performance Measure", "Base", "CNAM", "Lift"))
+```
+
+<br>
+
+#### TPC
+
+```{r}
+perf_tbl(model_comp[["TPC_Summ"]], column_names = c("Performance Measure", "Base", "CNAM", "Lift"))
+```
+
+<br>
+
+#### Fraud
+
+```{r}
+perf_tbl(model_comp[["Fraud_Summ"]], column_names = c("Performance Measure", "Base", "CNAM", "Lift"))
+```
+
+<br>
+
+### Attribute Importance {.tabset .tabset-fade}
+
+The tables below show the "Gain", or the percentage of importance, to the model that each individual attribute brings. In the new model here, the total amount of Gain contributed by CNAM fields is **~6.8%**, which is extremely high relative to other data that has been tested.
+
+<br>
+
+```{r}
+attr_tbl <- function(df, header_font = "white", header_bg = "lightskyblue",
+                     column_names = c("Attr Num", "Feature", "Gain", "Description", "Group")){
+  
+  id <- rownames(df)
+  df <- cbind(id = id, df)
+  
+  tbl <- kable(df,
+               "html",
+               escape = F,
+               col.names = column_names,
+               align = c('c', 'l', 'r', 'l', 'l')) %>%
+    kable_styling(bootstrap_options = c('striped', 'hover'), full_width = F) %>%
+    row_spec(0, bold = T, color = header_font, background = header_bg, align = 'c') %>% 
+    column_spec(1, bold = T) %>% 
+    scroll_box(height = "650px")
+
+  return(tbl)
+}
+```
+
+#### Base Model Attributes
+
+```{r}
+attr_tbl(model_imp[["Base"]])
+```
+
+<br>
+
+
+#### CNAM Model Attributes
+
+```{r}
+attr_tbl(model_imp[["CNAM"]])
+```
+
+<br>
+
+
+## Top 5 Model
+
+This is an overview of the model that takes the top 5 phones from each account, according to the new 3.1 phone model, and then runs them through a new algorithm to adjust the score and reorder them, by taking into account the CNAM variables.  
+
+This new model will be compared back to the 3.1 phone model, to assess lift.
+
+<br>
+
+### Performance {.tabset .tabset-fade}
+
+Below is the performance for the 3.1 model vs. the top 5 CNAM model.  The areas that are compared are KS (higher the better), and then contact/verified/disconnect/wrong party for the top position phone for the holdout sample.  The sub-samples that are used are First Party Collections, Third Party Collections, and Fraud.
+
+<br>
+
+#### KS
+
+```{r}
+perf_tbl(model_comp_top[["KS"]], column_names = c("Party", "Base KS", "CNAM KS", "KS Lift"))
+```
+
+<br>
+
+#### All Accounts
+
+```{r}
+perf_tbl(model_comp_top[["All_Summ"]], column_names = c("Performance Measure", "Base", "CNAM", "Lift"))
+```
+
+<br>
+
+#### FPC
+
+```{r}
+perf_tbl(model_comp_top[["FPC_Summ"]], column_names = c("Performance Measure", "Base", "CNAM", "Lift"))
+```
+
+<br>
+
+#### TPC
+
+```{r}
+perf_tbl(model_comp_top[["TPC_Summ"]], column_names = c("Performance Measure", "Base", "CNAM", "Lift"))
+```
+
+<br>
+
+#### Fraud
+
+```{r}
+perf_tbl(model_comp_top[["Fraud_Summ"]], column_names = c("Performance Measure", "Base", "CNAM", "Lift"))
+```
+
+<br>
+
+
+### Attribute Importance {.tabset .tabset-fade}
+
+The tables below show the “Gain”, or the percentage of importance, to the model that each individual attribute brings. In the new model here, the total amount of Gain contributed by CNAM fields is **~10%**, which is extremely high relative to other data that has been tested.
+
+<br>
+
+#### Base Model Attributes
+
+```{r}
+attr_tbl(model_imp[["3_1"]])
+```
+
+<br>
+
+
+#### CNAM Model Attributes
+
+```{r}
+df <- model_imp[["CNAM_Top"]]
+id <- rownames(df)
+df <- cbind(id = id, df)
+
+kable(df,
+      "html",
+      escape = F,
+      col.names = c("Attr Num", "Feature", "Gain", "Description", "Group"),
+      align = c('c', 'l', 'r', 'l', 'l')) %>%
+  kable_styling(bootstrap_options = c('striped', 'hover'), full_width = F) %>%
+  row_spec(0, bold = T, color = "white", background = "lightskyblue", align = 'c') %>% 
+  column_spec(1, bold = T)
+```
+
+<br>
+
+
+# Summary
+
+
+CNAM has showed lift to RPC and WPC, whether it is implemented into the Phone Shell, or if it is implemented as an additional call to rescore the top *x* phones.  The way that this data will be incorporated in the phone products will be discussed moving forward.
